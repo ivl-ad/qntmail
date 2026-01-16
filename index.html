@@ -54,6 +54,32 @@
       font-family: var(--font);
       overflow-x: hidden;
     }
+	
+	/* ================================
+   Disable text selection globally
+   (prevents drag highlighting)
+================================ */
+body {
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none;    /* Firefox */
+  -ms-user-select: none;     /* Old Edge */
+  user-select: none;
+}
+
+
+/* Re-enable selection for interactive elements */
+input,
+textarea,
+select,
+button,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+
 
     /* Fullscreen WebGL canvas */
     #stage {
@@ -216,12 +242,24 @@
       box-shadow: 0 24px 70px rgba(0,0,0,0.35);
       backdrop-filter: blur(12px);
     }
-    h1{
-      margin: 0 0 10px;
-      font-size: clamp(34px, 4vw, 54px);
-      line-height: 1.04;
-      letter-spacing: -0.7px;
-    }
+    .heroAbove h1 {
+  margin: 0 0 10px;
+
+  /* Force single line */
+  white-space: nowrap;
+
+  /* Must fit container width */
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+
+  /* Container-based scaling (NOT viewport-based) */
+  font-size: clamp(20px, 5.2cqw, 54px);
+
+  line-height: 1.05;
+  letter-spacing: -0.7px;
+}
+
     .sub {
       margin: 0 0 18px;
       font-size: 15.5px;
@@ -364,6 +402,8 @@
 	
 	/* ===== HERO ABOVE GLOBE ===== */
 .heroAbove {
+  container-type: inline-size;
+
   position: absolute;
   top: 30vh;
   left: 50%;
@@ -798,6 +838,8 @@ filter: brightness(1.15) contrast(1.1);
 
 
 
+
+
 	
 	
   </style>
@@ -1196,25 +1238,100 @@ modalOverlay.addEventListener("click", e => {
 const mouse = {
   x: 0,
   y: 0,
-  active: false
+  lastX: 0,
+  lastY: 0,
+  down: false,     // ← pointer button held
+  anchored: false
 };
+
+
 
 
 // ===== GLOBAL POINTER TRACKING (SCROLL SAFE) =====
 window.addEventListener(
   "pointermove",
   (e) => {
+    if (!mouse.down) return; // 🔑 ONLY rotate while pressed
+
     const w = window.innerWidth;
     const h = window.innerHeight;
 
-    // Normalize to -1 … +1 regardless of scroll
-    mouse.x = (e.clientX / w) * 2 - 1;
-    mouse.y = (e.clientY / h) * 2 - 1;
+    const nx = (e.clientX / w) * 2 - 1;
+    const ny = (e.clientY / h) * 2 - 1;
 
-    mouse.active = true;
+    if (!mouse.anchored) {
+      mouse.lastX = nx;
+      mouse.lastY = ny;
+      mouse.x = 0;
+      mouse.y = 0;
+      mouse.anchored = true;
+    } else {
+      mouse.x += nx - mouse.lastX;
+      mouse.y += ny - mouse.lastY;
+      mouse.x = clamp(mouse.x, -1, 1);
+      mouse.y = clamp(mouse.y, -1, 1);
+      mouse.lastX = nx;
+      mouse.lastY = ny;
+    }
   },
   { passive: true }
 );
+
+
+window.addEventListener("pointerdown", (e) => {
+  mouse.down = true;
+  mouse.anchored = false; // force fresh anchor on drag start
+
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+
+  mouse.lastX = (e.clientX / w) * 2 - 1;
+  mouse.lastY = (e.clientY / h) * 2 - 1;
+
+  mouse.x = 0;
+  mouse.y = 0;
+});
+
+
+window.addEventListener("pointerup", () => {
+  mouse.down = false;
+  mouse.anchored = false;
+
+  // 🔒 Bake current orientation as new base
+  if (mouseRotationEnabled && globe) {
+    baseYaw = globe.rotation.y - autoRot;
+    basePitch = globe.rotation.x;
+  }
+
+  // Reset deltas
+  mouse.x = 0;
+  mouse.y = 0;
+});
+
+
+
+
+
+window.addEventListener("pointerleave", () => {
+  mouse.active = false;
+  mouse.anchored = false;
+
+  // 🔑 HARD RESET accumulated deltas
+  mouse.x = 0;
+  mouse.y = 0;
+});
+
+
+window.addEventListener("blur", () => {
+  mouse.active = false;
+  mouse.anchored = false;
+
+  // 🔑 Reset deltas when tab loses focus
+  mouse.x = 0;
+  mouse.y = 0;
+});
+
+
 	
 	
 	
@@ -1557,8 +1674,20 @@ globe.material.needsUpdate = true;
     // Resize / Quality switching
     // -----------------------------
     let globeRadius = 1.35;
+	
+	
 
-    function applyQuality(mode) {
+
+   function applyQuality(mode) {
+  // Save current rotation BEFORE rebuilding globe
+  let savedRotX = 0;
+  let savedRotY = 0;
+
+  if (globe) {
+    savedRotX = globe.rotation.x;
+    savedRotY = globe.rotation.y;
+  }
+
   qualityMode = mode;
   const cfg = QUALITY[mode];
 
@@ -1568,30 +1697,40 @@ globe.material.needsUpdate = true;
   createStars(cfg.stars);
   globeRadius = createGlobe(cfg.globeSeg);
 
-  // 🔴 DEBUG DOT — NEW YORK CITY
-  const dot = new THREE.Mesh(
-    new THREE.SphereGeometry(0.03, 16, 16),
-    new THREE.MeshBasicMaterial({ color: 0xff0000 })
-  );
-  latLonToVec3(40.71, -74.00, dot.position);
-  //latLonToVec3(40.71, 74.00, dot.position);
-  dot.position.multiplyScalar(globeRadius + 0.02);
-  //globe.add(dot);
+  // Restore rotation
+  globe.rotation.x = savedRotX;
+  globe.rotation.y = savedRotY;
+
+  gridLines.rotation.copy(globe.rotation);
+  atmosphere.rotation.copy(globe.rotation);
+
+  // Re-anchor rotation math
+  baseYaw = globe.rotation.y - autoRot;
+  basePitch = globe.rotation.x;
+
+ // --- HARD RESET mouse influence ---
+suppressMouseUntil = performance.now() + 120; // ~2 frames @ 60fps
+
+mouse.active = false;
+mouse.x = 0;
+mouse.y = 0;
+
 
   createArcsAndPackets(globeRadius, cfg);
 
   const hudText = document.getElementById("hudText");
-  //hudText.textContent = `Quality: ${mode === "high" ? "High" : "Low"}`;
   hudText.textContent =
-  `Quality: ${mode === "high" ? "High" : "Low"}`
-  + (autoQualityEnabled ? " (Auto)" : " (Manual)");
+    `Quality: ${mode === "high" ? "High" : "Low"}` +
+    (autoQualityEnabled ? " (Auto)" : " (Manual)");
 
-hudText.style.color =
-  mode === "high" ? "#6DFFB1" : "#FFD166"; // green / amber
+  hudText.style.color =
+    mode === "high" ? "#6DFFB1" : "#FFD166";
+}
+
+
 
   
 
-}
 
 
     function resize() {
@@ -1616,7 +1755,7 @@ const isMobile = window.innerWidth <= 640; // matches your CSS breakpoint
 
 const hasBelowContent = window.innerHeight < 900;
 
-let fill = hasBelowContent ? 0.62 : 0.78;
+let fill = hasBelowContent ? 0.8 : 0.8;
 
 // Make globe ~20% smaller ONLY on mobile
 if (isMobile) {
@@ -1637,6 +1776,11 @@ if (isMobile) {
 
   // Keep your slight upward angle, but set distance on Z
   camera.position.set(0, 1.1, targetDist);
+  if(isMobile){
+  camera.position.set(0, 2.3, targetDist);
+  }
+  
+  
 
   // Keep OrbitControls limits sensible relative to targetDist
   controls.minDistance = targetDist * 0.62;
@@ -1983,6 +2127,10 @@ document.querySelector('[href="#get-started"]').addEventListener("click", e => {
 
     // Some gentle globe auto-rotation
     let autoRot = 0;
+	// Mouse suppression after quality switch
+let suppressMouseUntil = 0;
+
+	
 
     function tick() {
       requestAnimationFrame(tick);
@@ -2071,10 +2219,17 @@ const MAX_PITCH = Math.PI * 0.18;
 let mouseYaw = 0;
 let mousePitch = 0;
 
-if (mouse.active && mouseRotationEnabled) {
+if (
+  mouse.down &&
+  mouseRotationEnabled &&
+  performance.now() > suppressMouseUntil
+) {
   mouseYaw = mouse.x * MAX_YAW;
   mousePitch = mouse.y * MAX_PITCH;
 }
+
+
+
 
 // Final targets (NO snapping)
 const targetYaw = baseYaw + autoRot + mouseYaw;
@@ -2083,6 +2238,8 @@ const targetPitch = basePitch + mousePitch;
 // Smooth interpolation
 globe.rotation.y = lerp(globe.rotation.y, targetYaw, 0.06);
 globe.rotation.x = lerp(globe.rotation.x, targetPitch, 0.06);
+
+
 
 // Sync layers
 gridLines.rotation.y = globe.rotation.y * 1.02;
@@ -2169,6 +2326,7 @@ _quat.setFromRotationMatrix(_lookMat);
     // -----------------------------
     resize();
     applyQuality(prefersReducedMotion ? "low" : "high");
+	//applyQuality("low");
 
     // If reduced motion, start paused (but allow user toggle)
     if (prefersReducedMotion) {
