@@ -365,7 +365,7 @@
 	/* ===== HERO ABOVE GLOBE ===== */
 .heroAbove {
   position: absolute;
-  top: 5vh;
+  top: 30vh;
   left: 50%;
   transform: translateX(-50%);
   width: min(720px, calc(100% - 36px));
@@ -1100,6 +1100,24 @@ function loadEarthTexture(onReady) {
     let qualityMode = "high";
     let motionEnabled = !prefersReducedMotion;
 
+
+
+// ===== AUTO QUALITY (FPS BASED) =====
+let autoQualityEnabled = true;
+let lastQualityChange = 0;
+
+let fpsSamples = [];
+let fpsTimer = 0;
+let lowFpsTime = 0;
+let highFpsTime = 0;
+
+const LOW_FPS_THRESHOLD = 38;
+const HIGH_FPS_THRESHOLD = 52;
+const CHECK_INTERVAL = 1.0;
+const DOWNGRADE_AFTER = 2.5;
+const UPGRADE_AFTER = 5.0;
+const QUALITY_COOLDOWN = 4.0;
+
     // -----------------------------
     // Scene setup
     // -----------------------------
@@ -1496,7 +1514,16 @@ globe.material.needsUpdate = true;
   createArcsAndPackets(globeRadius, cfg);
 
   const hudText = document.getElementById("hudText");
-  hudText.textContent = `Quality: ${mode === "high" ? "High" : "Low"}`;
+  //hudText.textContent = `Quality: ${mode === "high" ? "High" : "Low"}`;
+  hudText.textContent =
+  `Quality: ${mode === "high" ? "High" : "Low"}`
+  + (autoQualityEnabled ? " (Auto)" : " (Manual)");
+
+hudText.style.color =
+  mode === "high" ? "#6DFFB1" : "#FFD166"; // green / amber
+
+  
+
 }
 
 
@@ -1856,10 +1883,17 @@ document.querySelector('[href="#get-started"]').addEventListener("click", e => {
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
-    document.getElementById("toggleQuality").addEventListener("click", () => {
-      applyQuality(qualityMode === "high" ? "low" : "high");
-      resize();
-    });
+    //document.getElementById("toggleQuality").addEventListener("click", () => {
+    //  applyQuality(qualityMode === "high" ? "low" : "high");
+    //  resize();
+    //});
+	
+	document.getElementById("toggleQuality").addEventListener("click", () => {
+  autoQualityEnabled = false; // user override
+  applyQuality(qualityMode === "high" ? "low" : "high");
+  resize();
+});
+
 
     document.getElementById("toggleMotion").addEventListener("click", () => {
       motionEnabled = !motionEnabled;
@@ -1880,7 +1914,67 @@ document.querySelector('[href="#get-started"]').addEventListener("click", e => {
 
       const dt = clamp(clock.getDelta(), 0, 0.033); // cap delta for stability
 
+
+// ----- FPS tracking -----
+const fps = 1 / dt;
+fpsSamples.push(fps);
+if (fpsSamples.length > 30) fpsSamples.shift();
+fpsTimer += dt;
+
+
+
+
       controls.update();
+
+
+
+// ----- Auto quality switching -----
+if (autoQualityEnabled && fpsTimer >= CHECK_INTERVAL) {
+  fpsTimer = 0;
+
+  const avgFps =
+    fpsSamples.reduce((a, b) => a + b, 0) / fpsSamples.length;
+
+  const now = performance.now() / 1000;
+
+  if (now - lastQualityChange > QUALITY_COOLDOWN) {
+    if (qualityMode === "high") {
+      if (avgFps < LOW_FPS_THRESHOLD) {
+        lowFpsTime += CHECK_INTERVAL;
+        highFpsTime = 0;
+
+        if (lowFpsTime >= DOWNGRADE_AFTER) {
+          applyQuality("low");
+          resize();
+          lastQualityChange = now;
+          lowFpsTime = 0;
+        }
+      } else {
+        lowFpsTime = 0;
+      }
+    }
+
+    if (qualityMode === "low") {
+      if (avgFps > HIGH_FPS_THRESHOLD) {
+        highFpsTime += CHECK_INTERVAL;
+        lowFpsTime = 0;
+
+        if (highFpsTime >= UPGRADE_AFTER) {
+          applyQuality("high");
+          resize();
+          lastQualityChange = now;
+          highFpsTime = 0;
+        }
+      } else {
+        highFpsTime = 0;
+      }
+    }
+  }
+}
+
+
+
+
 
       // Subtle star drift
       if (stars) stars.rotation.y += dt * 0.02;
@@ -2030,6 +2124,8 @@ document
 
 
     tick();
+	document.querySelector(".hud")?.classList.add("visible");
+
   </script>
 </body>
 </html>
