@@ -1100,6 +1100,13 @@ function loadEarthTexture(onReady) {
 
     let qualityMode = "high";
     let motionEnabled = !prefersReducedMotion;
+	let mouseRotationEnabled = true; // <-- ADD
+	let mouseRotationBeforeModal = true; // remembers state
+	let baseYaw = 0;
+let basePitch = 0;
+
+
+
 
 
 // ===== SAFARI PERFORMANCE FALLBACK =====
@@ -1139,16 +1146,38 @@ const modalContent = document.getElementById("modalContent");
 const modalClose = document.querySelector(".modalClose");
 
 function openModal(html) {
+  mouseRotationBeforeModal = mouseRotationEnabled;
+
+  if (mouseRotationEnabled) {
+    // Bake orientation before disabling mouse input
+    baseYaw = globe.rotation.y - autoRot;
+    basePitch = globe.rotation.x;
+  }
+
+  mouseRotationEnabled = false;
+
   modalContent.innerHTML = html;
   modalOverlay.classList.add("active");
   modalOverlay.setAttribute("aria-hidden", "false");
+
+  document.getElementById("toggleMotion").textContent = "Paused";
 }
+
+
 
 function closeModal() {
   modalOverlay.classList.remove("active");
   modalOverlay.setAttribute("aria-hidden", "true");
   modalContent.innerHTML = "";
+
+  // Restore mouse rotation state from before modal
+  mouseRotationEnabled = mouseRotationBeforeModal;
+
+  // Restore button label
+  document.getElementById("toggleMotion").textContent =
+    mouseRotationEnabled ? "Motion" : "Paused";
 }
+
 
 modalClose.addEventListener("click", closeModal);
 modalOverlay.addEventListener("click", e => {
@@ -1160,6 +1189,35 @@ modalOverlay.addEventListener("click", e => {
 	
 	
     const canvas = document.getElementById("stage");
+	
+	
+	
+	// ===== MOUSE-DRIVEN ROTATION =====
+const mouse = {
+  x: 0,
+  y: 0,
+  active: false
+};
+
+
+// ===== GLOBAL POINTER TRACKING (SCROLL SAFE) =====
+window.addEventListener(
+  "pointermove",
+  (e) => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+
+    // Normalize to -1 … +1 regardless of scroll
+    mouse.x = (e.clientX / w) * 2 - 1;
+    mouse.y = (e.clientY / h) * 2 - 1;
+
+    mouse.active = true;
+  },
+  { passive: true }
+);
+	
+	
+	
     const renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
@@ -1174,12 +1232,11 @@ modalOverlay.addEventListener("click", e => {
     camera.position.set(0, 1.1, 4.25);
 
     const controls = new OrbitControls(camera, canvas);
-controls.enableDamping = true;
-controls.dampingFactor = 0.08;
-controls.rotateSpeed = 0.9;   // faster drag rotation
-controls.zoomSpeed = 0.6;
+controls.enableDamping = false;   // no need anymore
+controls.enableRotate = false;    // 🔴 IMPORTANT
 controls.enablePan = false;
-controls.enableZoom = false;  // prevents scroll-wheel conflict
+controls.enableZoom = false;
+
 
 
     // Lights
@@ -1905,10 +1962,19 @@ document.querySelector('[href="#get-started"]').addEventListener("click", e => {
 });
 
 
-    document.getElementById("toggleMotion").addEventListener("click", () => {
-      motionEnabled = !motionEnabled;
-      document.getElementById("toggleMotion").textContent = motionEnabled ? "Motion" : "Paused";
-    });
+   document.getElementById("toggleMotion").addEventListener("click", () => {
+  if (mouseRotationEnabled) {
+    // Bake current orientation before pausing
+    baseYaw = globe.rotation.y - autoRot;
+    basePitch = globe.rotation.x;
+  }
+
+  mouseRotationEnabled = !mouseRotationEnabled;
+
+  document.getElementById("toggleMotion").textContent =
+    mouseRotationEnabled ? "Motion" : "Paused";
+});
+
 
     // -----------------------------
     // Animate loop (efficient)
@@ -1931,10 +1997,15 @@ fpsSamples.push(fps);
 if (fpsSamples.length > 30) fpsSamples.shift();
 fpsTimer += dt;
 
+// Fade interaction when pointer is idle
+if (!motionEnabled) {
+  mouse.x *= 0.92;
+  mouse.y *= 0.92;
+}
 
 
 
-      controls.update();
+     // controls.update();
 
 
 
@@ -1990,10 +2061,37 @@ if (autoQualityEnabled && fpsTimer >= CHECK_INTERVAL) {
       if (stars) stars.rotation.y += dt * 0.02;
 
       // Globe rotates slightly unless user is actively dragging (OrbitControls doesn't expose directly; we keep it subtle)
-      autoRot += dt * 0.25;
-      globe.rotation.y = autoRot;
-      gridLines.rotation.y = globe.rotation.y * 1.02;
-      atmosphere.rotation.y = globe.rotation.y * 0.98;
+      // ===== MOUSE-BASED GLOBE ROTATION =====
+autoRot += dt * 0.18; // continuous spin
+
+const MAX_YAW = Math.PI * 0.35;
+const MAX_PITCH = Math.PI * 0.18;
+
+// Mouse influence (temporary)
+let mouseYaw = 0;
+let mousePitch = 0;
+
+if (mouse.active && mouseRotationEnabled) {
+  mouseYaw = mouse.x * MAX_YAW;
+  mousePitch = mouse.y * MAX_PITCH;
+}
+
+// Final targets (NO snapping)
+const targetYaw = baseYaw + autoRot + mouseYaw;
+const targetPitch = basePitch + mousePitch;
+
+// Smooth interpolation
+globe.rotation.y = lerp(globe.rotation.y, targetYaw, 0.06);
+globe.rotation.x = lerp(globe.rotation.x, targetPitch, 0.06);
+
+// Sync layers
+gridLines.rotation.y = globe.rotation.y * 1.02;
+gridLines.rotation.x = globe.rotation.x * 1.02;
+
+atmosphere.rotation.y = globe.rotation.y * 0.98;
+atmosphere.rotation.x = globe.rotation.x * 0.98;
+
+
 
       // Animate packets (instanced updates only)
       if (packetMesh && motionEnabled) {
