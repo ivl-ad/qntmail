@@ -554,6 +554,11 @@
     0 12px 32px rgba(110,231,255,0.18);
 }
 
+.waitlistInput[type="text"] {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .waitlistSubmit {
   margin-top: 6px;
   align-self: center;
@@ -1382,9 +1387,81 @@ const networkHTML = `
 `;
 
 const getStartedHTML = `
-<h2>Get Started</h2>
-<p>QNTMail is currently in private preview.</p>
+<h2>Get Started with QNTMail</h2>
+<p>
+QNTMail is currently in private preview. You can request access using an invite
+code or sign in if you already have an account.
+</p>
+
+<!-- ===== PRIVATE ACCESS / BETA CODE ===== -->
+<div class="modalSection">
+  <h3>Private Access</h3>
+  <p>
+    If you received a private access or beta code, enter it below to begin
+    onboarding.
+  </p>
+
+  <form class="waitlistForm" onsubmit="event.preventDefault();">
+    <div class="waitlistField">
+      <label class="waitlistLabel">Access code</label>
+      <input
+        type="text"
+        class="waitlistInput"
+        placeholder="QNT-XXXX-XXXX"
+        autocomplete="off"
+        spellcheck="false"
+      />
+    </div>
+
+    <button type="submit" class="btn primary waitlistSubmit">
+      Verify access code
+    </button>
+
+    <p class="fine" style="text-align:center;">
+      Don’t have a code? Join the waitlist to request early access.
+    </p>
+  </form>
+</div>
+
+<!-- ===== EXISTING USER LOGIN ===== -->
+<div class="modalSection">
+  <h3>Existing Users</h3>
+  <p>
+    Already have a QNTMail account? Sign in below.
+  </p>
+
+  <form class="waitlistForm" onsubmit="event.preventDefault();">
+    <div class="waitlistField">
+      <label class="waitlistLabel">Email address</label>
+      <input
+        type="email"
+        class="waitlistInput"
+        placeholder="you@qntmail.com"
+        autocomplete="email"
+      />
+    </div>
+
+    <div class="waitlistField">
+      <label class="waitlistLabel">Password</label>
+      <input
+        type="password"
+        class="waitlistInput"
+        placeholder="••••••••"
+        autocomplete="current-password"
+      />
+    </div>
+
+    <button type="submit" class="btn waitlistSubmit">
+      Sign in
+    </button>
+
+    <p class="fine" style="text-align:center;">
+      Login is disabled in preview mode. UI only.
+    </p>
+  </form>
+</div>
 `;
+
 
 const waitlistHTML = `
 <h2>Join the QNTMail Waitlist</h2>
