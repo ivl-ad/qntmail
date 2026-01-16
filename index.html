@@ -705,7 +705,7 @@ filter: brightness(1.15) contrast(1.1);
 
 @media (max-width: 640px) {
   .brand {
-    margin-left: -20px;
+    margin-left: 0px;
   }
 }
 
@@ -729,6 +729,75 @@ filter: brightness(1.15) contrast(1.1);
 #top {
   scroll-margin-top: 100px; /* header + topMask buffer */
 }
+
+
+/* ===== MOBILE NAV OVERFLOW ===== */
+
+/* Hide hamburger on desktop */
+.navToggle {
+  display: none;
+}
+
+/* Mobile behavior */
+@media (max-width: 640px) {
+  /* Hide Security + Network pills */
+  .navlinks a:not(.primary) {
+    display: none;
+  }
+
+  /* Show hamburger */
+  .navToggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Dropdown menu */
+.mobileMenu {
+  position: fixed;
+  top: 72px; /* below header */
+  right: 16px;
+  z-index: 10;
+
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+
+  padding: 10px;
+  border-radius: 16px;
+
+  background: rgba(10, 14, 30, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+}
+
+.mobileMenu a {
+  padding: 10px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.mobileMenu a:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.mobileMenu.active {
+  display: flex;
+}
+
+@media (max-width: 640px) {
+  .navToggle {
+    margin-left: 10px; /* match .nav horizontal padding */
+	
+  }
+}
+
+
+
 	
 	
   </style>
@@ -751,13 +820,31 @@ filter: brightness(1.15) contrast(1.1);
 </a>
 
       <div class="navlinks">
-        <a class="pill" href="#security">Security</a>
-        <a class="pill" href="#network">Network</a>
-		<!--a class="pill" href="#contact">Contact</a-->
-        <a class="pill primary" href="#get-started">Login</a>
-      </div>
+  <a class="pill" href="#security">Security</a>
+  <a class="pill" href="#network">Network</a>
+  <a class="pill" href="#contact">Contact</a>
+  <a class="pill primary" href="#get-started">Get Started</a>
+
+  <!-- Mobile menu toggle -->
+  <button class="pill navToggle" aria-label="Open menu" type="button">
+    ☰
+  </button>
+</div>
+
     </nav>
   </header>
+  
+  
+  
+  <!-- Mobile overflow menu -->
+<div class="mobileMenu" id="mobileMenu" aria-hidden="true">
+  <a href="#security">Security</a>
+  <a href="#network">Network</a>
+  <a href="#contact">Contact</a>
+</div>
+
+  
+  
 
   <main>
   <!-- Full-viewport stage area (globe only). Nav stays on top. -->
@@ -833,9 +920,14 @@ filter: brightness(1.15) contrast(1.1);
     <!-- Modal Overlay -->
 <div id="modalOverlay" class="modalOverlay" aria-hidden="true">
   <div class="modalCard" role="dialog" aria-modal="true">
+  <div class="modalHeader">
+    <h2 class="modalTitle"></h2>
     <button class="modalClose" aria-label="Close">×</button>
-    <div id="modalContent"></div>
   </div>
+
+  <div class="modalBody" id="modalContent"></div>
+</div>
+
 </div>
   
   
@@ -1571,6 +1663,44 @@ high availability, fast convergence, and encrypted transport at global scale.
 `;
 
 
+const contactHTML = `
+<h2>Contact QNTMail</h2>
+<p>
+Have a question, partnership inquiry, or security concern?
+We’d love to hear from you.
+</p>
+
+<div class="modalSection">
+  <h3>General Inquiries</h3>
+  <p>
+    Email: <strong>team@qntmail.com</strong><br>
+    Response time: 1–2 business days
+  </p>
+</div>
+
+<div class="modalSection">
+  <h3>Security & Abuse</h3>
+  <p>
+    For vulnerability reports or abuse notifications:<br>
+    <strong>security@qntmail.com</strong>
+  </p>
+</div>
+
+<div class="modalSection">
+  <h3>Business & Partnerships</h3>
+  <p>
+    Enterprise deployments, integrations, or press:<br>
+    <strong>partners@qntmail.com</strong>
+  </p>
+</div>
+
+<p class="fine">
+  This is placeholder contact information for preview purposes.
+</p>
+`;
+
+
+
 const getStartedHTML = `
 <h2>Get Started with QNTMail</h2>
 <p>
@@ -1709,6 +1839,12 @@ document.querySelector('[href="#network"]').addEventListener("click", e => {
   openModal(networkHTML);
 });
 
+document.querySelector('[href="#contact"]').addEventListener("click", e => {
+  e.preventDefault();
+  openModal(contactHTML);
+});
+
+
 document.querySelector('[href="#get-started"]').addEventListener("click", e => {
   e.preventDefault();
   openModal(getStartedHTML);
@@ -1837,6 +1973,61 @@ _quat.setFromRotationMatrix(_lookMat);
       motionEnabled = false;
       document.getElementById("toggleMotion").textContent = "Paused";
     }
+	
+	
+	// ===== MOBILE NAV TOGGLE =====
+const navToggle = document.querySelector(".navToggle");
+const mobileMenu = document.getElementById("mobileMenu");
+
+navToggle?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  mobileMenu.classList.toggle("active");
+  mobileMenu.setAttribute(
+    "aria-hidden",
+    mobileMenu.classList.contains("active") ? "false" : "true"
+  );
+});
+
+document.addEventListener("click", (e) => {
+  if (
+    mobileMenu.classList.contains("active") &&
+    !mobileMenu.contains(e.target) &&
+    !navToggle.contains(e.target)
+  ) {
+    mobileMenu.classList.remove("active");
+    mobileMenu.setAttribute("aria-hidden", "true");
+  }
+});
+
+	// ===== MOBILE MENU MODAL HOOKS =====
+document
+  .querySelector('.mobileMenu a[href="#security"]')
+  ?.addEventListener("click", (e) => {
+    e.preventDefault();
+    mobileMenu.classList.remove("active");
+    mobileMenu.setAttribute("aria-hidden", "true");
+    openModal(securityHTML);
+  });
+
+document
+  .querySelector('.mobileMenu a[href="#network"]')
+  ?.addEventListener("click", (e) => {
+    e.preventDefault();
+    mobileMenu.classList.remove("active");
+    mobileMenu.setAttribute("aria-hidden", "true");
+    openModal(networkHTML);
+  });
+  
+  document
+  .querySelector('.mobileMenu a[href="#contact"]')
+  ?.addEventListener("click", (e) => {
+    e.preventDefault();
+    mobileMenu.classList.remove("active");
+    mobileMenu.setAttribute("aria-hidden", "true");
+    openModal(contactHTML);
+  });
+
+
 
     tick();
   </script>
