@@ -1424,8 +1424,19 @@ globe.material.needsUpdate = true;
   // Fraction of screen we want the globe diameter to occupy
   //const fill = 0.78; // 78% of min dimension feels "full" but not clipped
 
+
+
+const isMobile = window.innerWidth <= 640; // matches your CSS breakpoint
+
 const hasBelowContent = window.innerHeight < 900;
-const fill = hasBelowContent ? 0.62 : 0.78;
+
+let fill = hasBelowContent ? 0.62 : 0.78;
+
+// Make globe ~20% smaller ONLY on mobile
+if (isMobile) {
+  fill *= 0.8;
+}
+
 
 
   const vFov = THREE.MathUtils.degToRad(camera.fov);
