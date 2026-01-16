@@ -1088,17 +1088,27 @@ function loadEarthTexture(onReady) {
         packetsPerArc: 10,
       },
       low: {
-        dprCap: 1.25,
-        globeSeg: 64,
-        stars: 1200,
-        arcCount: 22,
-        arcSegments: 64,
-        packetsPerArc: 7,
-      }
+  dprCap: 1.0,        // 🔥 biggest win
+  globeSeg: 40,       // fewer verts
+  stars: 600,         // points cost fill-rate
+  arcCount: 14,       // fewer draw calls
+  arcSegments: 36,    // HUGE perf win
+  packetsPerArc: 4,   // instancing still costs CPU
+},
+
     };
 
     let qualityMode = "high";
     let motionEnabled = !prefersReducedMotion;
+
+
+// ===== SAFARI PERFORMANCE FALLBACK =====
+const isSafari =
+  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+if (isSafari) {
+  qualityMode = "low";
+}
 
 
 
@@ -2124,7 +2134,11 @@ document
 
 
     tick();
-	document.querySelector(".hud")?.classList.add("visible");
+	
+if (window.matchMedia("(min-width: 641px)").matches) {
+  document.querySelector(".hud")?.classList.add("visible");
+}
+
 
   </script>
 </body>
