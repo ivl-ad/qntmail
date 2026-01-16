@@ -703,7 +703,32 @@ filter: brightness(1.15) contrast(1.1);
   transform: translateY(0);
 }
 
+@media (max-width: 640px) {
+  .brand {
+    margin-left: -20px;
+  }
+}
 
+@media (max-width: 640px) {
+  .foot {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .foot > div {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}
+
+#top {
+  scroll-margin-top: 100px; /* header + topMask buffer */
+}
 	
 	
   </style>
