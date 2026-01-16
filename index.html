@@ -623,6 +623,49 @@ filter: brightness(1.15) contrast(1.1);
 	//outline: 2px solid lime;
 }
 
+
+
+/* ===== NETWORK METRICS ===== */
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+@media (max-width: 640px) {
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.metricCard {
+  padding: 14px 14px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.045);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: var(--muted2);
+  margin-bottom: 4px;
+}
+
+.metricValue {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text);
+}
+
+.metricNote {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--muted2);
+}
+
 	
 	
   </style>
@@ -1382,9 +1425,77 @@ QNTMail uses zero-trust, end-to-end cryptography. Servers never access plaintext
 `;
 
 const networkHTML = `
-<h2>Global Network</h2>
-<p>Messages are routed via a distributed, latency-aware mesh.</p>
+<h2>QNTMail Global Network</h2>
+<p>
+QNTMail operates a distributed, latency-aware delivery network designed for
+high availability, fast convergence, and encrypted transport at global scale.
+</p>
+
+<div class="modalSection">
+  <h3>Network Architecture</h3>
+  <ul class="modalList">
+    <li>Regionally distributed relay clusters across <strong>5 continents</strong></li>
+    <li>Anycast ingress with automatic regional failover</li>
+    <li>Stateless routing nodes with ephemeral session keys</li>
+    <li>No single point of failure — mesh-based path selection</li>
+  </ul>
+</div>
+
+<div class="modalSection">
+  <h3>Performance Targets</h3>
+
+  <div class="metricGrid">
+    <div class="metricCard">
+      <div class="metricLabel">Global uptime</div>
+      <div class="metricValue">99.99%</div>
+      <div class="metricNote">Rolling 30-day target</div>
+    </div>
+
+    <div class="metricCard">
+      <div class="metricLabel">Median delivery latency</div>
+      <div class="metricValue">&lt; 180 ms</div>
+      <div class="metricNote">Inter-continental</div>
+    </div>
+
+    <div class="metricCard">
+      <div class="metricLabel">Regional latency</div>
+      <div class="metricValue">&lt; 45 ms</div>
+      <div class="metricNote">Same-region delivery</div>
+    </div>
+
+    <div class="metricCard">
+      <div class="metricLabel">Failover time</div>
+      <div class="metricValue">&lt; 3 s</div>
+      <div class="metricNote">Automatic reroute</div>
+    </div>
+  </div>
+</div>
+
+<div class="modalSection">
+  <h3>Routing & Resilience</h3>
+  <ul class="modalList">
+    <li>Latency-weighted path scoring updated continuously</li>
+    <li>Encrypted hop-to-hop transport (TLS + forward secrecy)</li>
+    <li>Automatic congestion avoidance and rerouting</li>
+    <li>Traffic shaping to mitigate regional outages</li>
+  </ul>
+</div>
+
+<div class="modalSection">
+  <h3>Visualization</h3>
+  <p>
+    The globe view represents live routing behavior. Each arc corresponds to a
+    signed delivery envelope traversing the network, with packet glow intensity
+    reflecting throughput and link health.
+  </p>
+</div>
+
+<p class="fine">
+  Figures represent internal targets and simulated load testing results during
+  private preview.
+</p>
 `;
+
 
 const getStartedHTML = `
 <h2>Get Started with QNTMail</h2>
