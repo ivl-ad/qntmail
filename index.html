@@ -829,6 +829,31 @@ filter: brightness(1.15) contrast(1.1);
   display: flex;
 }
 
+
+
+/* ===== HERO PRESS-THROUGH EFFECT ===== */
+.hero {
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    backdrop-filter 0.25s ease;
+}
+
+/* Active while pointer is down */
+.hero.pressed {
+  /*background: rgba(255,255,255,0.01);  almost fully transparent */
+  background: transparent;
+  border-color: transparent; /* rgba(255,255,255,0.04); */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  backdrop-filter: none; /* optional — reduce glassiness */
+}
+
+
+
+
+
+
 @media (max-width: 640px) {
   .navToggle {
     margin-left: 10px; /* match .nav horizontal padding */
@@ -1231,6 +1256,29 @@ modalOverlay.addEventListener("click", e => {
 	
 	
     const canvas = document.getElementById("stage");
+
+
+
+
+// ===== HERO PRESS INTERACTION =====
+const hero = document.querySelector(".hero");
+
+window.addEventListener("pointerdown", () => {
+  hero?.classList.add("pressed");
+});
+
+window.addEventListener("pointerup", () => {
+  hero?.classList.remove("pressed");
+});
+
+window.addEventListener("pointercancel", () => {
+  hero?.classList.remove("pressed");
+});
+
+window.addEventListener("blur", () => {
+  hero?.classList.remove("pressed");
+});
+
 	
 	
 	
