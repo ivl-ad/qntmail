@@ -849,6 +849,23 @@ filter: brightness(1.15) contrast(1.1);
   backdrop-filter: none; /* optional — reduce glassiness */
 }
 
+/* ===== FEATURE CARD PRESS-THROUGH EFFECT ===== */
+.card {
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    backdrop-filter 0.25s ease;
+}
+
+.card.pressed {
+  background: transparent;               /* fully translucent */
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;                 /* ⬅️ blur removed */
+}
+
+
 
 
 
@@ -1260,27 +1277,49 @@ modalOverlay.addEventListener("click", e => {
 
 
 
-// ===== HERO PRESS INTERACTION =====
+// ===== HERO PRESS INTERACTION (DESKTOP ONLY) =====
 const hero = document.querySelector(".hero");
+const heroPressMedia = window.matchMedia("(min-width: 641px)");
+
+function clearHeroPressed() {
+  hero?.classList.remove("pressed");
+}
 
 window.addEventListener("pointerdown", () => {
+  if (!heroPressMedia.matches) return; // ⛔ disable on mobile
   hero?.classList.add("pressed");
 });
 
-window.addEventListener("pointerup", () => {
-  hero?.classList.remove("pressed");
+window.addEventListener("pointerup", clearHeroPressed);
+window.addEventListener("pointercancel", clearHeroPressed);
+window.addEventListener("blur", clearHeroPressed);
+
+// Safety: if viewport switches to mobile while pressed
+heroPressMedia.addEventListener("change", (e) => {
+  if (!e.matches) clearHeroPressed();
 });
 
-window.addEventListener("pointercancel", () => {
-  hero?.classList.remove("pressed");
-});
 
-window.addEventListener("blur", () => {
-  hero?.classList.remove("pressed");
-});
 
-	
-	
+
+// ===== FEATURE CARDS PRESS (GLOBAL) =====
+/*
+const featureCards = [
+  document.getElementById("security"),
+  document.getElementById("network")
+].filter(Boolean);
+
+function setFeaturePressed(isPressed) {
+  featureCards.forEach(card => card.classList.toggle("pressed", isPressed));
+}
+
+// Use capture so it triggers even if canvas gets the event first
+window.addEventListener("pointerdown", () => setFeaturePressed(true), { capture: true });
+window.addEventListener("pointerup", () => setFeaturePressed(false), { capture: true });
+window.addEventListener("pointercancel", () => setFeaturePressed(false), { capture: true });
+window.addEventListener("blur", () => setFeaturePressed(false), { capture: true });
+*/
+
 	
 	// ===== MOUSE-DRIVEN ROTATION =====
 const mouse = {
